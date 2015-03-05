@@ -25,4 +25,4 @@ def calculate_accuracy(predictions, classes):
     for i in range(len(predictions)):
         if(predictions[i] == classes[i]):
             correct+=1.0
-    return correct/float(len(classes))
+    return correct/float(len(predictions))

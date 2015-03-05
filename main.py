@@ -80,7 +80,7 @@ import util
 
 
 X_VAL = True
-X_VAL_FIRST = 0.8
+X_VAL_FIRST = 0.1
 X_VAL_LAST = 0.2
 
 
@@ -279,6 +279,47 @@ def system_call_frequency(tree):
         c[key] =  value
     return c
 
+def system_call_sequence_frequency(tree):
+    """
+    arguments:
+      tree is an xml.etree.ElementTree object
+    returns:
+      a dictionary mapping 'call_1-' ... 'call_10-' to the top 10 most frequent calls
+    """
+    c = Counter()
+    in_all_section = False
+    store = {}
+    last = None
+    for el in tree.iter():
+        # ignore everything outside the "all_section" element
+        if el.tag == "all_section" and not in_all_section:
+            in_all_section = True
+        elif el.tag == "all_section" and in_all_section:
+            in_all_section = False
+        elif in_all_section:
+            if last is None:
+                last = el.tag
+                continue
+            tag = last +'-'+ el.tag
+            last = el.tag
+            if tag in store:
+                store[tag] += 1
+            else:
+                store[tag] = 1
+    for key, value in store.iteritems():
+        c[key] =  value
+    return c
+
+
+def process_frequency(tree):
+    c= Counter()
+    proc = 0
+    for el in tree.iter():
+        if el.tag == "process":
+            proc+=1
+    c["process_count"] = proc
+    return c
+
 ## The following function does the feature extraction, learning, and prediction
 def main():
     train_dir = "./train"
@@ -286,7 +327,7 @@ def main():
     outputfile = "mypredictions.csv"  # feel free to change this or take it as an argument
     
     # TODO put the names of the feature functions you've defined above in this list
-    ffs = [first_last_system_call_feats, system_call_count_feats, system_call_frequency]
+    ffs = [first_last_system_call_feats, system_call_count_feats, system_call_frequency, system_call_sequence_frequency, process_frequency]
     
     # extract features
     print "extracting training features..."
