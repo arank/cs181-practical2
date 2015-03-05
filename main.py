@@ -127,7 +127,12 @@ def extract_feats(ffs, direc="train", global_feat_dict=None):
             # parse file as an xml document
             tree = ET.parse(os.path.join(direc,datafile))
             # accumulate features
-            [rowfd.update(ff(tree)) for ff in ffs]
+            for ff in ffs:
+                pruned = {} 
+                for key,val in ff(tree).iteritems():
+                    if key in util.top_features:
+                        pruned[key] = val
+                rowfd.update(pruned) 
             fds.append(rowfd)
         elif(X_VAL and i < list_len*(X_VAL_FIRST+X_VAL_LAST)):
             test_ids.append(id_str)
@@ -136,7 +141,12 @@ def extract_feats(ffs, direc="train", global_feat_dict=None):
             # parse file as an xml document
             tree = ET.parse(os.path.join(direc,datafile))
             # accumulate features
-            [rowfd.update(ff(tree)) for ff in ffs]
+            for ff in ffs:
+                pruned = {} 
+                for key, val in ff(tree).iteritems():
+                    if key in util.top_features:
+                        pruned[key] = val
+                rowfd.update(pruned) 
             test_fds.append(rowfd)
         else:
             break
@@ -259,7 +269,7 @@ def system_call_frequency(tree):
     arguments:
       tree is an xml.etree.ElementTree object
     returns:
-      a dictionary mapping 'call_1-' ... 'call_10-' to the top 10 most frequent calls
+      a dictionary of most calls and their indavidual frequencies
     """
     c = Counter()
     in_all_section = False
@@ -284,7 +294,7 @@ def system_call_sequence_frequency(tree):
     arguments:
       tree is an xml.etree.ElementTree object
     returns:
-      a dictionary mapping 'call_1-' ... 'call_10-' to the top 10 most frequent calls
+      a dictionary mapping 'call_1-call_2' 'call_2-call_3'... call bigram most frequent calls
     """
     c = Counter()
     in_all_section = False
@@ -311,13 +321,17 @@ def system_call_sequence_frequency(tree):
     return c
 
 
-def process_frequency(tree):
+def process_and_thread_frequency(tree):
     c= Counter()
     proc = 0
+    thread = 0
     for el in tree.iter():
         if el.tag == "process":
             proc+=1
+        elif el.tag == "thread":
+            thread+=1
     c["process_count"] = proc
+    c["thread_count"] = thread
     return c
 
 ## The following function does the feature extraction, learning, and prediction
@@ -327,7 +341,7 @@ def main():
     outputfile = "mypredictions.csv"  # feel free to change this or take it as an argument
     
     # TODO put the names of the feature functions you've defined above in this list
-    ffs = [first_last_system_call_feats, system_call_count_feats, system_call_frequency, system_call_sequence_frequency, process_frequency]
+    ffs = [first_last_system_call_feats, system_call_count_feats, system_call_frequency, system_call_sequence_frequency, process_and_thread_frequency]
     
     # extract features
     print "extracting training features..."
