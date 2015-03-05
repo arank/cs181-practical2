@@ -130,7 +130,9 @@ def extract_feats(ffs, direc="train", global_feat_dict=None):
             for ff in ffs:
                 pruned = {} 
                 for key,val in ff(tree).iteritems():
-                    if key in util.top_features:
+                    if util.top_features is None:
+                        pruned[key] = val
+                    elif key in util.top_features:
                         pruned[key] = val
                 rowfd.update(pruned) 
             fds.append(rowfd)
@@ -144,7 +146,9 @@ def extract_feats(ffs, direc="train", global_feat_dict=None):
             for ff in ffs:
                 pruned = {} 
                 for key, val in ff(tree).iteritems():
-                    if key in util.top_features:
+                    if util.top_features is None:
+                        pruned[key] = val
+                    elif key in util.top_features:
                         pruned[key] = val
                 rowfd.update(pruned) 
             test_fds.append(rowfd)
