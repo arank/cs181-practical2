@@ -300,6 +300,7 @@ def system_call_sequence_frequency(tree):
     in_all_section = False
     store = {}
     last = None
+    second = None
     for el in tree.iter():
         # ignore everything outside the "all_section" element
         if el.tag == "all_section" and not in_all_section:
@@ -307,17 +308,26 @@ def system_call_sequence_frequency(tree):
         elif el.tag == "all_section" and in_all_section:
             in_all_section = False
         elif in_all_section:
+            if second is None:
+                second =  el.tag
+                continue
             if last is None:
                 last = el.tag
                 continue
-            tag = last +'-'+ el.tag
+            # With wildcards:
+            tags = [second +'-'+ last +'-'+ el.tag, '?-'+ last +'-'+ el.tag, second +'-?-'+ el.tag, second +'-'+ last +'-?']
+            # Without wildcards:
+            # tags = [second +'-'+ last +'-'+ el.tag]
+            second = last
             last = el.tag
-            if tag in store:
-                store[tag] += 1
-            else:
-                store[tag] = 1
+            for tag in tags:
+                if tag in store:
+                    store[tag] += 1
+                else:
+                    store[tag] = 1
     for key, value in store.iteritems():
         c[key] =  value
+    print c
     return c
 
 
