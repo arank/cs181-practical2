@@ -79,6 +79,11 @@ from scipy import sparse
 import util
 
 
+X_VAL = True
+X_VAL_FIRST = 0.1
+X_VAL_LAST = 0.2
+
+
 def extract_feats(ffs, direc="train", global_feat_dict=None):
     """
     arguments:
@@ -97,30 +102,51 @@ def extract_feats(ffs, direc="train", global_feat_dict=None):
       target classes on the training data, but will contain only -1's on the test
       data
     """
+    test_classes = []
+    test_fds = []
+    test_ids = []
     fds = [] # list of feature dicts
     classes = []
     ids = [] 
-    for datafile in os.listdir(direc):
+    list_len = len(os.listdir(direc))  
+    for i, datafile in enumerate(os.listdir(direc)):
         # extract id and true class (if available) from filename
         id_str,clazz = datafile.split('.')[:2]
-        ids.append(id_str)
-        # add target class if this is training data
-        try:
-            classes.append(util.malware_classes.index(clazz))
-        except ValueError:
-            # we should only fail to find the label in our list of malware classes
-            # if this is test data, which always has an "X" label
-            assert clazz == "X"
-            classes.append(-1)
-        rowfd = {}
-        # parse file as an xml document
-        tree = ET.parse(os.path.join(direc,datafile))
-        # accumulate features
-        [rowfd.update(ff(tree)) for ff in ffs]
-        fds.append(rowfd)
-        
+
+        if(not X_VAL or i < list_len*X_VAL_FIRST):
+            ids.append(id_str)
+            # add target class if this is training data
+            try:
+                classes.append(util.malware_classes.index(clazz))
+            except ValueError:
+                # we should only fail to find the label in our list of malware classes
+                # if this is test data, which always has an "X" label
+                assert clazz == "X"
+                classes.append(-1)
+            rowfd = {}
+            # parse file as an xml document
+            tree = ET.parse(os.path.join(direc,datafile))
+            # accumulate features
+            [rowfd.update(ff(tree)) for ff in ffs]
+            fds.append(rowfd)
+        elif(X_VAL and i < list_len*(X_VAL_FIRST+X_VAL_LAST)):
+            test_ids.append(id_str)
+            test_classes.append(util.malware_classes.index(clazz))
+            rowfd = {}
+            # parse file as an xml document
+            tree = ET.parse(os.path.join(direc,datafile))
+            # accumulate features
+            [rowfd.update(ff(tree)) for ff in ffs]
+            test_fds.append(rowfd)
+        else:
+            break
+
     X,feat_dict = make_design_mat(fds,global_feat_dict)
-    return X, feat_dict, np.array(classes), ids
+    if X_VAL:
+        X_test, ignore = make_design_mat(test_fds,feat_dict)
+        return X, feat_dict, np.array(classes), ids, X_test, np.array(test_classes), test_ids 
+    else:
+        return X, feat_dict, np.array(classes), ids
 
 
 def make_design_mat(fds, global_feat_dict=None):
@@ -239,7 +265,10 @@ def main():
     
     # extract features
     print "extracting training features..."
-    X_train,global_feat_dict,t_train,train_ids = extract_feats(ffs, train_dir)
+    if X_VAL:
+        X_train,global_feat_dict,t_train,train_ids,X_test,test_classes,test_ids = extract_feats(ffs, train_dir)
+    else:
+        X_train,global_feat_dict,t_train,train_ids = extract_feats(ffs, train_dir)
     print "done extracting training features"
     print
     
@@ -253,20 +282,27 @@ def main():
     del X_train
     del t_train
     del train_ids
-    print "extracting test features..."
-    X_test,_,t_ignore,test_ids = extract_feats(ffs, test_dir, global_feat_dict=global_feat_dict)
-    print "done extracting test features"
-    print
-    
+
+    if not X_VAL:
+        print "extracting test features..."
+        X_test,_,t_ignore,test_ids = extract_feats(ffs, test_dir, global_feat_dict=global_feat_dict)
+        print "done extracting test features"
+        print
+
     # TODO make predictions on text data and write them out
     print "making predictions..."
+    print learned_W.shape
+    print X_test.shape
     preds = np.argmax(X_test.dot(learned_W),axis=1)
     print "done making predictions"
     print
-    
-    print "writing predictions..."
-    util.write_predictions(preds, test_ids, outputfile)
-    print "done!"
+
+    if X_VAL:
+        print "Accuracy is: "+str(util.calculate_accuracy(preds,test_classes))
+    else:
+        print "writing predictions..."
+        util.write_predictions(preds, test_ids, outputfile)
+        print "done!"   
 
 if __name__ == "__main__":
     main()
