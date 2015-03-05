@@ -83,6 +83,14 @@ X_VAL = True
 X_VAL_FIRST = 0.1
 X_VAL_LAST = 0.2
 
+def select_feats(counter):
+    pruned = {} 
+    for key,val in counter.iteritems():
+        if util.top_features is None:
+            pruned[key] = val
+        elif key in util.top_features:
+            pruned[key] = val
+    return pruned
 
 def extract_feats(ffs, direc="train", global_feat_dict=None):
     """
@@ -128,13 +136,7 @@ def extract_feats(ffs, direc="train", global_feat_dict=None):
             tree = ET.parse(os.path.join(direc,datafile))
             # accumulate features
             for ff in ffs:
-                pruned = {} 
-                for key,val in ff(tree).iteritems():
-                    if util.top_features is None:
-                        pruned[key] = val
-                    elif key in util.top_features:
-                        pruned[key] = val
-                rowfd.update(pruned) 
+                rowfd.update(select_feats(ff(tree)))
             fds.append(rowfd)
         elif(X_VAL and i < list_len*(X_VAL_FIRST+X_VAL_LAST)):
             test_ids.append(id_str)
@@ -144,13 +146,7 @@ def extract_feats(ffs, direc="train", global_feat_dict=None):
             tree = ET.parse(os.path.join(direc,datafile))
             # accumulate features
             for ff in ffs:
-                pruned = {} 
-                for key, val in ff(tree).iteritems():
-                    if util.top_features is None:
-                        pruned[key] = val
-                    elif key in util.top_features:
-                        pruned[key] = val
-                rowfd.update(pruned) 
+                rowfd.update(select_feats(ff(tree)))
             test_fds.append(rowfd)
         else:
             break
