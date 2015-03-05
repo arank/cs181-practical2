@@ -16,3 +16,13 @@ def write_predictions(predictions, ids, outfile):
         f.write("Id,Prediction\n")
         for i, history_id in enumerate(ids):
             f.write("%s,%d\n" % (history_id, predictions[i]))
+
+
+def calculate_accuracy(predictions, classes):
+    print predictions, classes
+    assert(len(predictions) ==  len(classes))
+    correct = 0.0
+    for i in range(len(predictions)):
+        if(predictions[i] == classes[i]):
+            correct+=1.0
+    return correct/float(len(classes))
