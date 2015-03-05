@@ -80,7 +80,7 @@ import util
 
 
 X_VAL = True
-X_VAL_FIRST = 0.1
+X_VAL_FIRST = 0.8
 X_VAL_LAST = 0.2
 
 
@@ -252,6 +252,31 @@ def system_call_count_feats(tree):
             in_all_section = False
         elif in_all_section:
             c['num_system_calls'] += 1
+    return c  
+
+def system_call_frequency(tree):
+    """
+    arguments:
+      tree is an xml.etree.ElementTree object
+    returns:
+      a dictionary mapping 'call_1-' ... 'call_10-' to the top 10 most frequent calls
+    """
+    c = Counter()
+    in_all_section = False
+    store = {}
+    for el in tree.iter():
+        # ignore everything outside the "all_section" element
+        if el.tag == "all_section" and not in_all_section:
+            in_all_section = True
+        elif el.tag == "all_section" and in_all_section:
+            in_all_section = False
+        elif in_all_section:
+            if el.tag in store:
+                store[el.tag] += 1
+            else:
+                store[el.tag] = 1
+    for key, value in store.iteritems():
+        c[key] =  value
     return c
 
 ## The following function does the feature extraction, learning, and prediction
@@ -261,7 +286,7 @@ def main():
     outputfile = "mypredictions.csv"  # feel free to change this or take it as an argument
     
     # TODO put the names of the feature functions you've defined above in this list
-    ffs = [first_last_system_call_feats, system_call_count_feats]
+    ffs = [first_last_system_call_feats, system_call_count_feats, system_call_frequency]
     
     # extract features
     print "extracting training features..."
